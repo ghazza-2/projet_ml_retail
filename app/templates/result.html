@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Résultat — Prédiction Churn</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="header">
+    <div class="header-inner">
+        <div class="logo">ChurnPredict</div>
+        <div class="subtitle">Analyse comportementale clientèle retail</div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            <h2>Résultat de l'analyse</h2>
+        </div>
+
+        <!-- Résultat principal -->
+        <div class="result-box result-{{ couleur }}">
+            <div class="result-label">
+                {% if pred == 1 %}
+                    Client à risque de départ
+                {% else %}
+                    Client fidèle
+                {% endif %}
+            </div>
+            <div class="result-proba">{{ proba }}%</div>
+            <div class="result-sublabel">probabilité de churn</div>
+        </div>
+
+        <!-- Jauge de risque -->
+        <div class="gauge-container">
+            <div class="gauge-bar">
+                <div class="gauge-fill gauge-{{ couleur }}" style="width: {{ proba }}%"></div>
+                <div class="gauge-marker" style="left: {{ proba }}%"></div>
+            </div>
+            <div class="gauge-labels">
+                <span>0%</span>
+                <span class="gauge-mid">50%</span>
+                <span>100%</span>
+            </div>
+        </div>
+
+        <!-- Niveau de risque -->
+        <div class="risk-row">
+            <div class="risk-badge badge-{{ couleur }}">
+                Risque {{ risque }}
+            </div>
+            <div class="risk-reco">
+                {{ recommandation }}
+            </div>
+        </div>
+
+        <!-- Tableau récapitulatif -->
+        <div class="section-title" style="margin-top:2rem">Données saisies</div>
+        <div class="recap-grid">
+            <div class="recap-item">
+                <span class="recap-label">Recency</span>
+                <span class="recap-value">{{ data.Recency }} jours</span>
+            </div>
+            <div class="recap-item">
+                <span class="recap-label">Frequency</span>
+                <span class="recap-value">{{ data.Frequency }} commandes</span>
+            </div>
+            <div class="recap-item">
+                <span class="recap-label">Monetary Total</span>
+                <span class="recap-value">£ {{ data.MonetaryTotal }}</span>
+            </div>
+            <div class="recap-item">
+                <span class="recap-label">Ancienneté</span>
+                <span class="recap-value">{{ data.CustomerTenureDays }} jours</span>
+            </div>
+            <div class="recap-item">
+                <span class="recap-label">Segment RFM</span>
+                <span class="recap-value">{{ data.RFMSegment }}</span>
+            </div>
+            <div class="recap-item">
+                <span class="recap-label">Type client</span>
+                <span class="recap-value">{{ data.CustomerType }}</span>
+            </div>
+            <div class="recap-item">
+                <span class="recap-label">Satisfaction</span>
+                <span class="recap-value">{{ data.SatisfactionScore }} / 5</span>
+            </div>
+            <div class="recap-item">
+                <span class="recap-label">Tickets support</span>
+                <span class="recap-value">{{ data.SupportTicketsCount }}</span>
+            </div>
+        </div>
+
+        <a href="/" class="btn-back">Analyser un autre client</a>
+    </div>
+</div>
+
+<div class="footer">
+    Atelier Machine Learning — GI2 &nbsp;|&nbsp; 2025-2026
+</div>
+
+</body>
+</html>

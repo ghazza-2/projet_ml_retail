@@ -1,0 +1,13 @@
+feature_1,feature_2,correlation
+Frequency,UniqueInvoices,1.0
+MonetaryMin,MonetaryMax,0.9939474266440925
+MonetaryStd,MinQuantity,0.9740468050249654
+MonetaryStd,MaxQuantity,0.9725849496075486
+MonetaryStd,MonetaryMin,0.9673247200463374
+MonetaryStd,MonetaryMax,0.9661346474200498
+MinQuantity,MaxQuantity,0.9611744124388267
+MonetaryTotal,TotalQuantity,0.9216489636539393
+MonetaryMax,MaxQuantity,0.9209753507966375
+MonetaryMin,MinQuantity,0.9192518128222812
+MonetaryMax,MinQuantity,0.9159080125519008
+MonetaryMin,MaxQuantity,0.9157207848718709

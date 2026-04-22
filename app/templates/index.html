@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Retail Churn Predictor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:    #3b82f6;
+      --green:   #22c55e;
+      --orange:  #f59e0b;
+      --red:     #ef4444;
+      --gray-50: #f9fafb;
+      --gray-100:#f3f4f6;
+      --gray-200:#e5e7eb;
+      --gray-400:#9ca3af;
+      --gray-600:#4b5563;
+      --gray-900:#111827;
+      --radius:  8px;
+      --shadow:  0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+      --shadow-lg:0 10px 25px rgba(0,0,0,.1);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-900);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #1e3a5f;
+      color: white;
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow);
+    }
+    header h1 { font-size: 16px; font-weight: 600; letter-spacing: .3px; }
+    .header-badge {
+      background: rgba(255,255,255,.15);
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+    }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      background: white;
+      border-bottom: 1px solid var(--gray-200);
+      padding: .75rem 2rem;
+      display: flex;
+      gap: 2rem;
+    }
+    .stat-item { display: flex; align-items: center; gap: .5rem; }
+    .stat-dot  { width: 8px; height: 8px; border-radius: 50%; }
+    .stat-label{ color: var(--gray-600); font-size: 12px; }
+    .stat-value{ font-weight: 600; font-size: 14px; }
+
+    /* ── Layout ── */
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; display: grid; grid-template-columns: 1fr 360px; gap: 1.5rem; }
+
+    /* ── Cards ── */
+    .card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .card-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; gap: .5rem; }
+    .card-title  { font-weight: 600; font-size: 14px; }
+    .card-icon   { width: 20px; height: 20px; }
+    .card-body   { padding: 1.25rem; }
+
+    /* ── Form ── */
+    .form-sections { display: flex; flex-direction: column; gap: 1.25rem; }
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--gray-400);
+      margin-bottom: .75rem;
+      padding-bottom: .5rem;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
+    .form-grid-2 { grid-template-columns: repeat(2, 1fr); }
+
+    label { display: block; font-size: 11px; font-weight: 500; color: var(--gray-600); margin-bottom: 4px; }
+    input[type=number], select {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--gray-900);
+      background: white;
+      transition: border-color .15s;
+      appearance: none;
+    }
+    input[type=number]:focus, select:focus {
+      outline: none;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+    }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; padding-right: 28px; }
+
+    /* ── Submit ── */
+    .btn-predict {
+      width: 100%;
+      padding: 11px;
+      background: #1e3a5f;
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      transition: background .15s, transform .1s;
+      margin-top: 1rem;
+    }
+    .btn-predict:hover   { background: #162d4a; }
+    .btn-predict:active  { transform: scale(.98); }
+    .btn-predict.loading { opacity: .7; pointer-events: none; }
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3); border-top-color: white; border-radius: 50%; animation: spin .7s linear infinite; display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Result panel ── */
+    .result-panel { position: sticky; top: 72px; display: flex; flex-direction: column; gap: 1rem; }
+
+    .risk-card { border-radius: var(--radius); padding: 1.5rem; text-align: center; border: 2px solid transparent; }
+    .risk-card.success { background: #f0fdf4; border-color: #86efac; }
+    .risk-card.warning { background: #fffbeb; border-color: #fcd34d; }
+    .risk-card.danger  { background: #fef2f2; border-color: #fca5a5; }
+    .risk-card.empty   { background: var(--gray-50); border-color: var(--gray-200); }
+
+    .risk-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; margin-bottom: .5rem; }
+    .risk-label.success { color: #15803d; }
+    .risk-label.warning { color: #b45309; }
+    .risk-label.danger  { color: #b91c1c; }
+    .risk-label.empty   { color: var(--gray-400); }
+
+    .risk-percent { font-size: 52px; font-weight: 700; line-height: 1; margin-bottom: .25rem; }
+    .risk-percent.success { color: #16a34a; }
+    .risk-percent.warning { color: #d97706; }
+    .risk-percent.danger  { color: #dc2626; }
+    .risk-percent.empty   { color: var(--gray-300); }
+
+    .risk-sublabel { font-size: 12px; color: var(--gray-600); }
+
+    /* Gauge bar */
+    .gauge-wrap { margin: 1rem 0 .5rem; }
+    .gauge-bg { height: 8px; background: var(--gray-100); border-radius: 4px; overflow: hidden; }
+    .gauge-fill { height: 100%; border-radius: 4px; transition: width .6s cubic-bezier(.4,0,.2,1), background .3s; }
+
+    .advice-box { font-size: 13px; color: var(--gray-600); background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 6px; padding: .875rem 1rem; line-height: 1.6; }
+
+    .placeholder-box { text-align: center; padding: 2rem; color: var(--gray-400); }
+    .placeholder-box svg { opacity: .3; margin-bottom: .75rem; }
+    .placeholder-box p { font-size: 13px; }
+
+    /* ── Error ── */
+    .error-box { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px; padding: .875rem 1rem; font-size: 13px; color: #b91c1c; display: none; margin-top: .75rem; }
+
+    @media (max-width: 768px) {
+      .container { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: repeat(2, 1fr); }
+      .result-panel { position: static; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🛍️ Retail Churn Predictor</h1>
+  <span class="header-badge" id="model-badge">Chargement…</span>
+</header>
+
+<!-- Stats bar -->
+<div class="stats-bar" id="stats-bar">
+  <div class="stat-item">
+    <div class="stat-dot" style="background:#3b82f6"></div>
+    <span class="stat-label">Total clients</span>
+    <span class="stat-value" id="s-total">—</span>
+  </div>
+  <div class="stat-item">
+    <div class="stat-dot" style="background:#ef4444"></div>
+    <span class="stat-label">Taux de churn</span>
+    <span class="stat-value" id="s-churn">—</span>
+  </div>
+  <div class="stat-item">
+    <div class="stat-dot" style="background:#22c55e"></div>
+    <span class="stat-label">Features</span>
+    <span class="stat-value" id="s-features">—</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ── Formulaire ── -->
+  <div class="card">
+    <div class="card-header">
+      <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+      <span class="card-title">Profil client</span>
+    </div>
+    <div class="card-body">
+      <form id="predict-form">
+        <div class="form-sections">
+
+          <!-- Section 1 : Comportement RFM -->
+          <div>
+            <div class="section-title">📊 Comportement RFM</div>
+            <div class="form-grid">
+              <div>
+                <label>Fréquence (nb commandes)</label>
+                <input type="number" name="Frequency" value="12" min="1" max="500" step="1">
+              </div>
+              <div>
+                <label>Montant total (£)</label>
+                <input type="number" name="MonetaryTotal" value="1200" step="0.01">
+              </div>
+              <div>
+                <label>Montant moyen / commande (£)</label>
+                <input type="number" name="MonetaryAvg" value="100" step="0.01">
+              </div>
+              <div>
+                <label>Écart-type montants (£)</label>
+                <input type="number" name="MonetaryStd" value="50" min="0" step="0.01">
+              </div>
+              <div>
+                <label>Quantité totale articles</label>
+                <input type="number" name="TotalQuantity" value="300" step="1">
+              </div>
+              <div>
+                <label>Qté moyenne / transaction</label>
+                <input type="number" name="AvgQuantityPerTransaction" value="6" min="1" step="0.1">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2 : Habitudes -->
+          <div>
+            <div class="section-title">🕐 Habitudes d'achat</div>
+            <div class="form-grid">
+              <div>
+                <label>Ancienneté premier achat (jours)</label>
+                <input type="number" name="FirstPurchaseDaysAgo" value="200" min="0" max="730">
+              </div>
+              <div>
+                <label>Intervalle moyen entre achats (j)</label>
+                <input type="number" name="AvgDaysBetweenPurchases" value="15" min="0" step="0.1">
+              </div>
+              <div>
+                <label>Ratio achats weekend (0-1)</label>
+                <input type="number" name="WeekendPurchaseRatio" value="0.15" min="0" max="1" step="0.01">
+              </div>
+              <div>
+                <label>Jour favori (0=Lun … 6=Dim)</label>
+                <input type="number" name="PreferredDayOfWeek" value="2" min="0" max="6" step="1">
+              </div>
+              <div>
+                <label>Heure favorite (0-23)</label>
+                <input type="number" name="PreferredHour" value="11" min="0" max="23" step="1">
+              </div>
+              <div>
+                <label>Moment de la journée</label>
+                <select name="PreferredTimeOfDay">
+                  <option>Matin</option>
+                  <option>Midi</option>
+                  <option>Après-midi</option>
+                  <option>Soir</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3 : Produits -->
+          <div>
+            <div class="section-title">📦 Produits & transactions</div>
+            <div class="form-grid">
+              <div>
+                <label>Produits uniques achetés</label>
+                <input type="number" name="UniqueProducts" value="45" min="1">
+              </div>
+              <div>
+                <label>Produits distincts / transaction</label>
+                <input type="number" name="AvgProductsPerTransaction" value="4" min="1" step="0.1">
+              </div>
+              <div>
+                <label>Total transactions (lignes)</label>
+                <input type="number" name="TotalTransactions" value="80" min="1">
+              </div>
+              <div>
+                <label>Lignes à prix nul</label>
+                <input type="number" name="ZeroPriceCount" value="0" min="0">
+              </div>
+              <div>
+                <label>Lignes quantité négative</label>
+                <input type="number" name="NegativeQuantityCount" value="2" min="0">
+              </div>
+              <div>
+                <label>Taux de retour (0-1)</label>
+                <input type="number" name="ReturnRatio" value="0.05" min="0" max="1" step="0.01">
+              </div>
+              <div>
+                <label>Pays uniques associés</label>
+                <input type="number" name="UniqueCountries" value="1" min="1" max="10">
+              </div>
+              <div>
+                <label>Diversité produits</label>
+                <select name="ProductDiversity">
+                  <option>Explorateur</option>
+                  <option>Modéré</option>
+                  <option>Spécialisé</option>
+                </select>
+              </div>
+              <div>
+                <label>Taille panier habituelle</label>
+                <select name="BasketSizeCategory">
+                  <option>Moyen</option>
+                  <option>Petit</option>
+                  <option>Grand</option>
+                  <option>Inconnu</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 4 : Profil client -->
+          <div>
+            <div class="section-title">👤 Profil démographique & compte</div>
+            <div class="form-grid">
+              <div>
+                <label>Âge</label>
+                <input type="number" name="Age" value="42" min="18" max="90">
+              </div>
+              <div>
+                <label>Tranche d'âge</label>
+                <select name="AgeCategory">
+                  <option>35-44</option>
+                  <option>Inconnu</option>
+                  <option>18-24</option>
+                  <option>25-34</option>
+                  <option>45-54</option>
+                  <option>55-64</option>
+                  <option>65+</option>
+                </select>
+              </div>
+              <div>
+                <label>Genre</label>
+                <select name="Gender">
+                  <option>M</option>
+                  <option>F</option>
+                  <option>Unknown</option>
+                </select>
+              </div>
+              <div>
+                <label>Niveau de dépense</label>
+                <select name="SpendingCategory">
+                  <option>Medium</option>
+                  <option>Low</option>
+                  <option>High</option>
+                  <option>VIP</option>
+                </select>
+              </div>
+              <div>
+                <label>Fidélité</label>
+                <select name="LoyaltyLevel">
+                  <option>Établi</option>
+                  <option>Nouveau</option>
+                  <option>Jeune</option>
+                  <option>Ancien</option>
+                  <option>Inconnu</option>
+                </select>
+              </div>
+              <div>
+                <label>Statut compte</label>
+                <select name="AccountStatus">
+                  <option>Active</option>
+                  <option>Suspended</option>
+                  <option>Pending</option>
+                  <option>Closed</option>
+                </select>
+              </div>
+              <div>
+                <label>Préférence weekend</label>
+                <select name="WeekendPreference">
+                  <option>Semaine</option>
+                  <option>Weekend</option>
+                  <option>Inconnu</option>
+                </select>
+              </div>
+              <div>
+                <label>Région</label>
+                <select name="Region">
+                  <option>UK</option>
+                  <option>Europe continentale</option>
+                  <option>Europe du Nord</option>
+                  <option>Europe du Sud</option>
+                  <option>Europe centrale</option>
+                  <option>Europe de l'Est</option>
+                  <option>Asie</option>
+                  <option>Amérique du Nord</option>
+                  <option>Amérique du Sud</option>
+                  <option>Océanie</option>
+                  <option>Moyen-Orient</option>
+                  <option>Autre</option>
+                </select>
+              </div>
+              <div>
+                <label>Pays</label>
+                <select name="Country">
+                  <option>United Kingdom</option>
+                  <option>France</option>
+                  <option>Germany</option>
+                  <option>Belgium</option>
+                  <option>Spain</option>
+                  <option>Italy</option>
+                  <option>Netherlands</option>
+                  <option>Switzerland</option>
+                  <option>Portugal</option>
+                  <option>Norway</option>
+                  <option>Sweden</option>
+                  <option>Denmark</option>
+                  <option>Finland</option>
+                  <option>Austria</option>
+                  <option>Australia</option>
+                  <option>Japan</option>
+                  <option>Canada</option>
+                  <option>USA</option>
+                  <option>Other</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 5 : Support & inscription -->
+          <div>
+            <div class="section-title">🎫 Support & inscription</div>
+            <div class="form-grid form-grid-2">
+              <div>
+                <label>Tickets support ouverts</label>
+                <input type="number" name="SupportTicketsCount" value="1" min="0" max="15">
+              </div>
+              <div>
+                <label>Score satisfaction (1-5)</label>
+                <input type="number" name="SatisfactionScore" value="3" min="1" max="5" step="1">
+              </div>
+              <div>
+                <label>Jours depuis inscription</label>
+                <input type="number" name="DaysSinceRegistration" value="365" min="0">
+              </div>
+              <div>
+                <label>Mois d'inscription (1-12)</label>
+                <input type="number" name="RegMonth" value="6" min="1" max="12">
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <button type="submit" class="btn-predict" id="submit-btn">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span id="btn-text">Prédire le risque de churn</span>
+          <div class="spinner" id="spinner"></div>
+        </button>
+
+        <div class="error-box" id="error-box"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Panel résultat ── -->
+  <div class="result-panel">
+
+    <!-- Résultat principal -->
+    <div class="card">
+      <div class="card-header">
+        <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span class="card-title">Résultat</span>
+      </div>
+      <div class="card-body">
+        <div class="risk-card empty" id="result-card">
+          <div class="placeholder-box">
+            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            <p>Remplissez le formulaire<br>et cliquez sur Prédire</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conseil -->
+    <div class="card" id="advice-card" style="display:none">
+      <div class="card-header">
+        <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        <span class="card-title">Recommandation</span>
+      </div>
+      <div class="card-body">
+        <p class="advice-box" id="advice-text"></p>
+      </div>
+    </div>
+
+    <!-- À propos du modèle -->
+    <div class="card">
+      <div class="card-header">
+        <svg class="card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span class="card-title">À propos du modèle</span>
+      </div>
+      <div class="card-body" style="font-size:12px;color:var(--gray-600);display:flex;flex-direction:column;gap:.4rem;">
+        <div style="display:flex;justify-content:space-between"><span>Modèle</span><span id="info-model" style="font-weight:600;color:var(--gray-900)">—</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Features</span><span id="info-features" style="font-weight:600;color:var(--gray-900)">—</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Clients entraînement</span><span id="info-total" style="font-weight:600;color:var(--gray-900)">—</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Taux de churn global</span><span id="info-churn" style="font-weight:600;color:var(--gray-900)">—</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Chargement des stats au démarrage ──────────────────────────────────────
+fetch('/api/stats')
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById('s-total').textContent    = data.total_clients?.toLocaleString('fr') ?? '—';
+    document.getElementById('s-churn').textContent    = data.churn_rate ? data.churn_rate + '%' : '—';
+    document.getElementById('s-features').textContent = data.features ?? '—';
+    document.getElementById('model-badge').textContent = data.model_name ?? 'Modèle ML';
+    document.getElementById('info-model').textContent    = data.model_name ?? '—';
+    document.getElementById('info-features').textContent = data.features ?? '—';
+    document.getElementById('info-total').textContent    = data.total_clients?.toLocaleString('fr') ?? '—';
+    document.getElementById('info-churn').textContent    = data.churn_rate ? data.churn_rate + '%' : '—';
+  })
+  .catch(() => {});
+
+// ── Soumission du formulaire ───────────────────────────────────────────────
+document.getElementById('predict-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  const btn     = document.getElementById('submit-btn');
+  const spinner = document.getElementById('spinner');
+  const btnText = document.getElementById('btn-text');
+  const errBox  = document.getElementById('error-box');
+
+  btn.classList.add('loading');
+  spinner.style.display = 'block';
+  btnText.textContent   = 'Analyse en cours…';
+  errBox.style.display  = 'none';
+
+  const formData = new FormData(this);
+
+  fetch('/predict', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => {
+      btn.classList.remove('loading');
+      spinner.style.display = 'none';
+      btnText.textContent   = 'Prédire le risque de churn';
+
+      if (!data.success) {
+        errBox.style.display  = 'block';
+        errBox.textContent    = 'Erreur : ' + data.error;
+        return;
+      }
+
+      showResult(data);
+    })
+    .catch(err => {
+      btn.classList.remove('loading');
+      spinner.style.display = 'none';
+      btnText.textContent   = 'Prédire le risque de churn';
+      errBox.style.display  = 'block';
+      errBox.textContent    = 'Erreur de connexion : ' + err.message;
+    });
+});
+
+function showResult(data) {
+  const card    = document.getElementById('result-card');
+  const advice  = document.getElementById('advice-card');
+  const color   = data.risk_color;  // success / warning / danger
+
+  const colorMap = { success: '#16a34a', warning: '#d97706', danger: '#dc2626' };
+  const hexColor = colorMap[color] || '#6b7280';
+
+  card.className = `risk-card ${color}`;
+  card.innerHTML = `
+    <div class="risk-label ${color}">${data.risk_level} risque</div>
+    <div class="risk-percent ${color}">${data.proba}%</div>
+    <div class="risk-sublabel">probabilité de départ</div>
+    <div class="gauge-wrap">
+      <div class="gauge-bg">
+        <div class="gauge-fill" style="width:${data.proba}%;background:${hexColor}"></div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--gray-400);margin-top:.25rem">
+      ${data.churn ? '⚠️ Churn prédit' : '✅ Fidèle prédit'}
+    </div>
+  `;
+
+  document.getElementById('advice-text').textContent = data.advice;
+  advice.style.display = 'block';
+
+  // Scroll vers le résultat sur mobile
+  if (window.innerWidth < 768) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+</script>
+
+</body>
+</html>
